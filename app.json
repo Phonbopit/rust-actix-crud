@@ -1,0 +1,7 @@
+{
+  "name": "Rust Actix CRUD Example",
+  "description": "Simple API with Actix",
+  "repository": "https://github.com/Phonbopit/rust-actix-crud",
+  "logo": "",
+  "keywords": ["rust"]
+}
