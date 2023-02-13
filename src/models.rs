@@ -10,7 +10,7 @@ pub struct Tweet {
 }
 
 #[derive(Debug, Insertable)]
-#[table_name = "tweets"]
+#[diesel(table_name = tweets)]
 pub struct NewTweet<'a> {
   pub message: &'a str,
   pub created_at: chrono::NaiveDateTime,
