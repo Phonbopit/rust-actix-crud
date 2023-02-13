@@ -13,8 +13,8 @@ async fn create(
   payload: web::Json<TweetPayload>,
 ) -> Result<HttpResponse, Error> {
   let tweet = web::block(move || {
-    let conn = pool.get()?;
-    add_a_tweet(&payload.message, &conn)
+    let conn = &mut pool.get()?;
+    add_a_tweet(&payload.message, conn)
   })
   .await?
   .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -25,8 +25,8 @@ async fn create(
 #[get("/tweets")]
 async fn index(pool: web::Data<DbPool>) -> Result<HttpResponse, Error> {
   let tweets = web::block(move || {
-    let conn = pool.get()?;
-    find_all(&conn)
+    let conn = &mut pool.get()?;
+    find_all(conn)
   })
   .await?
   .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -37,8 +37,8 @@ async fn index(pool: web::Data<DbPool>) -> Result<HttpResponse, Error> {
 #[get("/tweets/{id}")]
 async fn show(id: web::Path<i32>, pool: web::Data<DbPool>) -> Result<HttpResponse, Error> {
   let tweet = web::block(move || {
-    let conn = pool.get()?;
-    find_by_id(id.into_inner(), &conn)
+    let conn = &mut pool.get()?;
+    find_by_id(id.into_inner(), conn)
   })
   .await?
   .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -53,8 +53,8 @@ async fn update(
   pool: web::Data<DbPool>,
 ) -> Result<HttpResponse, Error> {
   let tweet = web::block(move || {
-    let conn = pool.get()?;
-    update_tweet(id.into_inner(), payload.message.clone(), &conn)
+    let conn = &mut pool.get()?;
+    update_tweet(id.into_inner(), payload.message.clone(), conn)
   })
   .await?
   .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -65,8 +65,8 @@ async fn update(
 #[delete("/tweets/{id}")]
 async fn destroy(id: web::Path<i32>, pool: web::Data<DbPool>) -> Result<HttpResponse, Error> {
   let result = web::block(move || {
-    let conn = pool.get()?;
-    delete_tweet(id.into_inner(), &conn)
+    let conn = &mut pool.get()?;
+    delete_tweet(id.into_inner(), conn)
   })
   .await?
   .map(|tweet| HttpResponse::Ok().json(tweet))
@@ -75,7 +75,7 @@ async fn destroy(id: web::Path<i32>, pool: web::Data<DbPool>) -> Result<HttpResp
   Ok(result)
 }
 
-fn add_a_tweet(_message: &str, conn: &PgConnection) -> Result<Tweet, DbError> {
+fn add_a_tweet(_message: &str, conn: &mut PgConnection) -> Result<Tweet, DbError> {
   use crate::schema::tweets::dsl::*;
 
   let new_tweet = NewTweet {
@@ -89,14 +89,14 @@ fn add_a_tweet(_message: &str, conn: &PgConnection) -> Result<Tweet, DbError> {
   Ok(res)
 }
 
-fn find_all(conn: &PgConnection) -> Result<Vec<Tweet>, DbError> {
+fn find_all(conn: &mut PgConnection) -> Result<Vec<Tweet>, DbError> {
   use crate::schema::tweets::dsl::*;
 
   let items = tweets.load::<Tweet>(conn)?;
   Ok(items)
 }
 
-fn find_by_id(tweet_id: i32, conn: &PgConnection) -> Result<Option<Tweet>, DbError> {
+fn find_by_id(tweet_id: i32, conn: &mut PgConnection) -> Result<Option<Tweet>, DbError> {
   use crate::schema::tweets::dsl::*;
 
   let tweet = tweets
@@ -107,7 +107,7 @@ fn find_by_id(tweet_id: i32, conn: &PgConnection) -> Result<Option<Tweet>, DbErr
   Ok(tweet)
 }
 
-fn update_tweet(tweet_id: i32, _message: String, conn: &PgConnection) -> Result<Tweet, DbError> {
+fn update_tweet(tweet_id: i32, _message: String, conn: &mut PgConnection) -> Result<Tweet, DbError> {
   use crate::schema::tweets::dsl::*;
 
   let tweet = diesel::update(tweets.find(tweet_id))
@@ -116,7 +116,7 @@ fn update_tweet(tweet_id: i32, _message: String, conn: &PgConnection) -> Result<
   Ok(tweet)
 }
 
-fn delete_tweet(tweet_id: i32, conn: &PgConnection) -> Result<usize, DbError> {
+fn delete_tweet(tweet_id: i32, conn: &mut PgConnection) -> Result<usize, DbError> {
   use crate::schema::tweets::dsl::*;
 
   let count = diesel::delete(tweets.find(tweet_id)).execute(conn)?;
